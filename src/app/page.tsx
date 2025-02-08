@@ -4,7 +4,6 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import 'leaflet/dist/leaflet.css'; // Add this import to ensure correct styling
 
-
 const DynamicMap = dynamic(() => import("@/components/Map"), { ssr: false });
 
 export default function Home() {

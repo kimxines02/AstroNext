@@ -170,17 +170,18 @@ const Map = () => {
           {/* Predicted Path */}
           {predictionPath.length > 0 && <Polyline positions={predictionPath} color="blue" weight={2} opacity={0.6} />}
         </MapContainer>
-        <SatelliteInfo satelliteData={satelliteData} />
-      </div>
-      <div>
         <NextPass
           satelliteId={satelliteId}  
           observerLat={observerLat}
           observerLng={observerLng}
           observerAlt={observerAlt}
-          days={1}  
+          days={2}  
           minVisibility={minVisibility}  
         />
+      </div>
+      <div className="bg-gray-900 p-4 text-sm flex flex-col justify-between">
+        <SatelliteInfo satelliteData={satelliteData} />
+        
       </div>
       
     </div>

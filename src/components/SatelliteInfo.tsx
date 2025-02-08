@@ -19,7 +19,7 @@ const SatelliteInfo: React.FC<SatelliteInfoProps> = ({ satelliteData }) => {
   if (!satelliteData) {
     return <div>No satellite data available</div>;
   }
-
+  console.log('MORE DATA: ', satelliteData);
   return (
     <div className="w-full bg-gray-800 text-white p-4 text-sm">
       <h3>Satellite Information</h3>

@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
 interface NextPassData {
+  endUTC: string;
+  maxUTC: string;
+  startUTC: string;
+  startAzCompass: string;
+  endAzCompass: string;
   startAzimuth: number;
   maxElevation: number;
   endAzimuth: number;
@@ -14,9 +19,16 @@ interface NextPassProps {
   observerLat: number;
   observerLng: number;
   observerAlt: number;
-  days: number;  // Add the number of days to look ahead
-  minVisibility: number; // Add minimum visibility for the pass
+  days: number;
+  minVisibility: number;
 }
+
+const formatDuration = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}m ${remainingSeconds}s`;
+};
+
 
 const NextPass: React.FC<NextPassProps> = ({
   satelliteId,
@@ -34,7 +46,6 @@ const NextPass: React.FC<NextPassProps> = ({
   useEffect(() => {
     const fetchNextPass = async () => {
       try {
-        // Send a GET request to the backend API with the necessary query parameters
         const response = await fetch(`/api/satellite?type=visualpasses&satelliteId=${satelliteId}&observerLat=${observerLat}&observerLng=${observerLng}&observerAlt=${observerAlt}&days=${days}&minVisibility=${minVisibility}`);
         
         if (!response.ok) {
@@ -43,37 +54,37 @@ const NextPass: React.FC<NextPassProps> = ({
 
         const data = await response.json();
 
-        // Check if nextPass exists and is an array with at least one item
-        if (!data.nextPass || !Array.isArray(data.nextPass) || data.nextPass.length === 0) {
+        if (!data.passes || !Array.isArray(data.passes) || data.passes.length === 0) {
           setError('No upcoming visual passes found.');
           setLoading(false);
           return;
         }
 
         const nextPassData: NextPassData = {
-          startAzimuth: data.nextPass[0].startAzimuth,
-          maxElevation: data.nextPass[0].maxElevation,
-          endAzimuth: data.nextPass[0].endAzimuth,
-          totalDuration: data.nextPass[0].duration,
-          startTime: data.nextPass[0].startUTC,
-          endTime: data.nextPass[0].endUTC,
+          startAzimuth: data.passes[0].startAz,
+          maxElevation: data.passes[0].maxEl,
+          endAzimuth: data.passes[0].endAz,
+          totalDuration: data.passes[0].duration,
+          startTime: new Date(data.passes[0].startUTC * 1000).toISOString(),
+          endTime: new Date(data.passes[0].endUTC * 1000).toISOString(),
+          startAzCompass: data.passes[0].startAzCompass,
+          endAzCompass: data.passes[0].endAzCompass,
+          startUTC: new Date(data.passes[0].startUTC * 1000).toISOString(),
+          maxUTC: new Date(data.passes[0].maxUTC * 1000).toISOString(),
+          endUTC: new Date(data.passes[0].endUTC * 1000).toISOString(),
         };
 
         setNextPass(nextPassData);
 
-        // Calculate the remaining time before the pass
         const startDate = new Date(nextPassData.startTime);
         const now = new Date();
         const timeDifference = startDate.getTime() - now.getTime();
 
         if (timeDifference > 0) {
-          // Format the time difference into hours, minutes, and seconds
           const hours = Math.floor(timeDifference / (1000 * 60 * 60));
           const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
           const seconds = Math.floor((timeDifference % (1000 * 60)) / 1000);
-
-          const formattedTime = `${hours}h ${minutes}m ${seconds}s`;
-          setTimeRemaining(formattedTime);
+          setTimeRemaining(`${hours}h ${minutes}m ${seconds}s`);
         } else {
           setError('The next pass is in the past.');
         }
@@ -92,10 +103,8 @@ const NextPass: React.FC<NextPassProps> = ({
     };
 
     fetchNextPass();
-
-    // Periodically refresh the next pass data
-    const interval = setInterval(fetchNextPass, 60000); // Refresh every minute
-    return () => clearInterval(interval); // Cleanup on component unmount
+    const interval = setInterval(fetchNextPass, 60000);
+    return () => clearInterval(interval);
   }, [satelliteId, observerLat, observerLng, observerAlt, days, minVisibility]);
 
   if (loading) {
@@ -107,16 +116,59 @@ const NextPass: React.FC<NextPassProps> = ({
   }
 
   return (
-    <div className="w-full bg-gray-800 text-white p-4 text-sm">
-      <h3>Next Pass of Space Station Over Your Location</h3>
+    <div className="w-full bg-gray-800 text-white p-4 text-xs">
+      <h3 className="text-sm font-bold py-2">🛰 Next Pass of Space Station Over Your Location...</h3>
       {nextPass ? (
-        <div>
-          <div><strong>Start Azimuth:</strong> {nextPass.startAzimuth}°</div>
-          <div><strong>Max Elevation:</strong> {nextPass.maxElevation}°</div>
-          <div><strong>End Azimuth:</strong> {nextPass.endAzimuth}°</div>
-          <div><strong>Total Duration:</strong> {nextPass.totalDuration} seconds</div>
-          <div><strong>Start Time:</strong> {timeRemaining}</div> {/* Display time remaining */}
-          <div><strong>End Time:</strong> {nextPass.endTime}</div>
+        <div className="grid grid-cols-5 justify-items-stretch text-center gap-1">
+          <div className="flex flex-col justify-self-auto border border-white p-1 content-center">
+            <strong className="border-b border-white mb-1">Start Azimuth:</strong>
+            <label>
+              {new Date(nextPass.startUTC).toLocaleString("en-US", {
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })} <br/>
+              {nextPass.startAzimuth}° {nextPass.startAzCompass}
+            </label>
+          </div>
+          <div className="flex flex-col justify-self-auto border border-white p-1">
+            <strong className="border-b border-white mb-1">Max Elevation:</strong>
+            <label>
+              {new Date(nextPass.maxUTC).toLocaleString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })} <br/>
+              {nextPass.maxElevation}°
+            </label>
+          </div>
+          <div className="flex flex-col justify-self-auto border border-white p-1">
+            <strong className="border-b border-white mb-1">End Azimuth:</strong>
+            <label>
+              {new Date(nextPass.endUTC).toLocaleString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })} <br/>
+              {nextPass.endAzimuth}° {nextPass.endAzCompass}
+            </label>
+          </div>
+          <div className="flex flex-col justify-self-auto border border-white p-1">
+            <strong className="border-b border-white mb-1">Total Duration:</strong>
+            {formatDuration(nextPass.totalDuration)}
+          </div>
+          <div className="flex flex-col justify-self-auto border border-white p-1">
+            <strong className="border-b border-white mb-1">Start Time:</strong>
+            {timeRemaining}
+          </div>
+          {/*
+          <div className="flex flex-col justify-self-auto border border-white p-1">
+            <strong className="border-b border-white">End Time:</strong>
+            {nextPass.endTime}
+          </div>
+          */}
         </div>
       ) : (
         <div>No upcoming pass data found.</div>
